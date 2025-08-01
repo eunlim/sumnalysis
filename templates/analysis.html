@@ -1,0 +1,57 @@
+<html lang="ko">
+{% include 'head.html' %}
+<body>
+<template>
+    <div class="container mx-auto p-4" id="app">
+        <!-- 탭 메뉴 -->
+        <div class="flex justify-around mb-4 border-b pb-2">
+            <button
+                    v-for="tab in tabs"
+                    :key="tab.name"
+                    :class="[
+                              'px-4 py-2 font-semibold',
+                              currentTab === tab.name ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-500'
+                            ]"
+                    @click="currentTab = tab.name"
+                    >
+                {{ tab.label }}
+            </button>
+        </div>
+
+        <!-- 탭별 컴포넌트 렌더링 -->
+        <component :is="tabComponents[currentTab]" />
+    </div>
+</template>
+
+<script>
+    const { craateApp, ref } = Vue;
+    createApp({
+        setup() {
+
+        }
+    }).mount('#app');
+
+    // 탭 정의
+    const tabs = [
+        { name: 'score', label: '썸 점수' },
+        { name: 'emotion', label: '감정 분석' },
+        { name: 'highlight', label: '하이라이트' },
+        { name: 'coach', label: 'AI코치' },
+    ]
+    const currentTab = ref('score')
+
+    // 탭별 컴포넌트 import
+    import sumScore from './tabs/sumScore.vue'
+    import emotionAnalysis from './tabs/emotionAnalysis.vue'
+    import highlight from './tabs/highlight.vue'
+    import aiCoach from 'aiCoach.vue'
+
+    const tabComponents = {
+        score: sumScore,
+        emotion: emotionAnalysis,
+        highlight: highlight,
+        coach: aiCoach
+    }
+</script>
+</body>
+</html>
