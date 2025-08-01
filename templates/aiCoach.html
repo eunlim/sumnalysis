@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+{% include 'head.html' %}
+<body class="bg-white text-gray-900">
+<div id="app">
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- 채팅 영역 -->
+        <div class="w-full md:w-2/3 p-6 flex flex-col mx-auto">
+            <h2 class="text-3xl font-bold text-purple-700 mb-6">💬모의대화💜</h2>
+
+            <div class="flex-1 overflow-y-auto space-y-4 max-h-[60vh] px-2">
+                <!-- 사용자 메시지 -->
+                <div class="self-end bg-purple-200 text-purple-900 px-4 py-2 rounded-xl max-w-md w-fit break-words shadow">
+                    헐… 방금 스토리 본 건데, 거기 어디야? 분위기 너무 좋다… 사진도 예쁘고 사람도 예쁘고 😳📸
+                </div>
+
+                <!-- 상대방 응답 -->
+                <div class="ml-auto self-start bg-white border border-gray-300 px-4 py-2 rounded-xl max-w-md w-fit break-words shadow">
+                    알아서 뭐하게
+                </div>
+
+                <!-- 사용자 후속 메시지 -->
+                <div class="self-end bg-purple-200 text-purple-900 px-4 py-2 rounded-xl max-w-md w-fit break-words shadow">
+                    대답이 너무 쿨해서 심장이 식을 뻔...🥶<br>
+                    근데 혹시… 다음엔 나랑 같이 가줄 수 있어?<br>
+                    커피는 너가 골라주고, 사진은 내가 찍을게 📷☕
+                </div>
+            </div>
+
+            <form @submit.prevent class="mt-6 flex w-full max-w-full">
+                <input v-model="userMessage" type="text" placeholder="메시지를 입력하세요..." class="flex-1 px-4 py-3 rounded-l-xl border border-gray-300 outline-none" />
+                <button class="bg-purple-600 text-white px-6 py-3 rounded-r-xl hover:bg-purple-700 transition">전송</button>
+            </form>
+        </div>
+
+        <!-- 분석 패널 컴포넌트 분리 -->
+{#        <aside class="hidden md:block md:w-1/3 bg-white border-l border-gray-200 p-6 space-y-4">#}
+{#            {% include 'analysis.html' %}#}
+{#        </aside>#}
+    </div>
+</div>
+
+<script>
+    const { createApp, ref } = Vue;
+    createApp({
+        setup() {
+            const userMessage = ref("미아네");
+            return { userMessage };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
