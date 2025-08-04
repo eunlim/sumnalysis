@@ -1,98 +1,85 @@
 <html lang="ko">
 {% include 'head.html' %}
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.0/dist/tesseract.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <link rel="stylesheet" href="/static/upload.css" />
+   <link rel="stylesheet" href="/static/upload.css" />
 </head>
 <body>
 <div id="summ-upload">
     <h1>❤️ AI가 당신의 썸을 감지했습니다 ❤️</h1>
-
     <textarea id="textInput" rows="6" placeholder="대화 입력 또는 이미지 드래그" @input="onInput"></textarea>
-
-    <div id="dropArea"
-         @click="triggerFile"
-         @dragover.prevent
-         @drop="onDrop">
-        <!-- 🔑 name="file" 꼭 필요함 -->
+    <div id="dropArea"  @click="triggerFile" @dragover.prevent @drop="onDrop">
         <input type="file" id="imageInput" name="file" hidden @change="onFileChange" />
         <button type="button">파일 업로드</button>
     </div>
-
     <img id="preview" />
-
     <button class="submit" @click="submit">분석 제출</button>
-
     <p id="loading" style="display: none;">로딩 중...</p>
 </div>
 
 <script type="module">
     import { createApp, ref, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
-
     createApp({
         setup() {
             const text = ref('')
             const file = ref(null)
             const previewUrl = ref('')
-
             const triggerFile = () => {
                 document.getElementById('imageInput').click()
             }
-
             const onInput = (e) => {
                 text.value = e.target.value
             }
-
             const onFileChange = (e) => {
                 const f = e.target.files[0]
                 if (f) handleImage(f)
             }
-
             const onDrop = (e) => {
                 e.preventDefault()
                 const f = e.dataTransfer.files[0]
                 if (f) handleImage(f)
             }
-
             const handleImage = (f) => {
                 file.value = f
                 const preview = document.getElementById('preview')
                 previewUrl.value = URL.createObjectURL(f)
                 preview.src = previewUrl.value
-
-                Tesseract.recognize(f, 'kor', {
-                    logger: m => console.log(m)
-                }).then(({ data: { text: result } }) => {
-                    text.value = result
-                 //   document.getElementById('textInput').value = result
-                })
             }
-
             const submit = async () => {
                 if (!text.value.trim() && !file.value) {
                     alert('내용을 입력하거나 이미지를 업로드하세요.')
                     return
                 }
-
                 const form = new FormData()
                 if (text.value) form.append('text', text.value)
                 if (file.value) form.append('file', file.value)
 
                 const loadingEl = document.getElementById('loading')
                 loadingEl.style.display = 'block'
-
                 try {
-                    const res = await axios.post('/api/upload', form)
-                    alert('업로드 성공! 🎉')
-                   // location.href = `/summ/result/${res.data.result_id}` // 분석 페이지 이동
+                    const res = await axios.post('/api/v1/analysis', form)
+                    console.log("res::::", res)
+                    var statusRes =  null;
+                    const intervalId = setInterval(async () => {
+                        try {
+                            const analysis_id = getCookie('analysis_id');
+                            const statusRes = await axios.get('/api/v1/analysis/status');
+                            console.log("isComplete::::", statusRes.data);
+                            if (statusRes.data.status === "completed") {
+                                clearInterval(intervalId);
+                                window.location.href = '/api/v1/analysis/score';
+                            }
+                        } catch (err) {
+                            console.error('상태 확인 중 오류', err);
+                            clearInterval(intervalId);
+                        }
+                    }, 1000);
+
                 } catch {
                     alert('업로드 실패')
                 } finally {
                     loadingEl.style.display = 'none'
                 }
             }
-
             return {
                 triggerFile,
                 onInput,
