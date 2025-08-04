@@ -5,20 +5,21 @@
     <!-- 탭 메뉴 -->
     <div class="flex justify-around mb-4 border-b pb-2" v-if="tabs.length">
         <button v-for="tab in tabs" :key="tab.name"
-                :class="['px-4 py-2 font-semibold', currentTab === tab.name ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-500']"
+                :class="['px-4 py-2 font-semibold', currentTab === tab.name ? 'text-black-600 border-b-2 border-purple-600' : 'text-gray-500']"
                 @click="currentTab = tab.name">
             [[ tab.label ]]
         </button>
-        <button @click="increaseAge">test</button>
     </div>
     <!-- sumScore는 내부에서 직접 렌더링 -->
-    <div class="m-auto">
-        <h2 class="text-center text-3xl text-600 font-bold mb-2">🔥<span :style="{color: param.flame_color}" v-text="param.score"></span></h2>
-        <p class="text-center text-lg font-medium" v-text="param.summary"></p>
-    </div>
+    <sum-score v-if="currentTab === 'score'">
+        <div class="p-8 m-auto">
+            <h2 class="text-center text-3xl text-600 font-bold mb-2">🔥<span :style="{color: param.flame_color}" v-html="param.score + '%'"></span></h2>
+            <p class="text-center text-lg font-medium" v-text="param.summary"></p>
+        </div>
+    </sum-score>
 
     <!-- 나머지 탭은 외부 HTML로 불러옴 -->
-    <component v-if="dynamicComponent"></component>
+    <component v-else :is="dynamicComponent"> </component>
 </div>
 <style>
     [v-cloak] { display: none; }
@@ -26,21 +27,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const { createApp, ref, watch, reactive, result } = Vue
-    // 내부 sumScore 컴포넌트 정의
-    // const sumScore = {
-    //     delimiters: ['[[', ']]'],
-    //     template:
-    //     `<div>
-    //         <h2 class="text-3xl text-red-600 font-bold mb-2">🔥</h2>
-    //         <p class="text-lg font-medium"></p>
-    //     </div>`
-    //     ,
-    //     data() {
-    //         data: "{{ result }}"
-    //     }
-    // }
-
-
     // 외부 템플릿 로딩용 탭들
     createApp({
         delimiters: ['[[', ']]'],
@@ -48,27 +34,19 @@
 
         },
         setup() {
-
             const param = reactive(JSON.parse('{{ result | tojson | safe }}'))
-            const increaseAge = (f) => {
-
-                console.log('#####::::',param)
-            };
-
             const tabs = ref([
                 { name: 'score', label: '썸 점수' },
                 { name: 'emotion', label: '감정 분석' },
                 { name: 'highlight', label: '하이라이트' },
-                { name: 'coach', label: 'AI 코치' }
+                { name: 'coaching', label: 'AI 코치' }
             ])
             const currentTab = ref('score')
             const dynamicComponent = ref(null)
-
             const fetchDynamicComponent = async (tabName) => {
                 const res = await axios.get(`/api/v1/analysis/${tabName}`)
                 const html = res.data.template
                 const data = res.data.result
-
                 const container = document.createElement('div')
                 container.innerHTML = html
                 const template = container.querySelector('template')?.innerHTML || html
@@ -78,6 +56,7 @@
                         return { data, loaded: true }
                     },
                     mounted() {
+                        console.log('tabName', tabName)
                         if (tabName === 'emotion') {
                             this.$nextTick(() => {
                                 const summaryEl = document.getElementById('emotion-summary')
@@ -118,15 +97,13 @@
                             })
                         }
                     },
-                    template
+                   template:html
                 }
             }
-
             watch(currentTab, (val) => {
                 if (val !== 'score') fetchDynamicComponent(val)
             })
-
-            return { tabs, currentTab, dynamicComponent, increaseAge, param }
+            return { tabs, currentTab, dynamicComponent, param }
         }
     }).mount('#app')
 </script>

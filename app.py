@@ -11,19 +11,10 @@ sumUrl = 'https://adapting-optionally-mole.ngrok-free.app'
 def hello_pybo():
    return render_template("main.html")
 
-#모의대화
-@app.route('/chat')
-def chat():
-    return render_template('chat.html')
-
 # 분석전 파일업로드 및 텍스트 화면
 @app.route('/sumInput')
 def sumInput():
     return render_template('sumInput.html')
-
-@app.route('/sumInput2')
-def sumInput2():
-    return render_template('sumInput2.html')
 
 # 파일업로드
 @app.route('/api/v1/analysis', methods=['POST'])
@@ -31,10 +22,9 @@ def handle_file_upload():
 
     try:
         url = f"{sumUrl}/api/v1/analysis"
+        headers = {'Content-Type': 'multipart/form-data, application/json, text/plain'}
         ALLOWED_EXTENSIONS = ['.csv', '.txt','.png', '.jpg', '.jpeg']  # 허용 가능 파일
-        text = None
         uploaded_file = None
-        result = None
         result_id = None
 
         # 값 체크
@@ -57,12 +47,12 @@ def handle_file_upload():
         elif text_input:
             result_id = 'conversation_text'
             data = {result_id: text_input}
-            res = requests.post(url, files={'conversation_file':''}, data=data)
+            res = requests.post(url, files={'conversation_file':''}, data=data, headers=headers)
 
         else:
             return jsonify({'error': '분석할 데이터가 없습니다.'}), 400
 
-        if res.status_code == 200:
+        if res.status_code == 202:
             response_data = res.json()
 
             print("SUCCESS:", response_data)
@@ -118,20 +108,22 @@ def analysis_score():
     except Exception as e:
         return jsonify({'error': f'통신실패: {str(e)}'}), 500
 
+# tab화면
 @app.route('/api/v1/analysis/<tab_name>')
 def analysis_tab(tab_name):
     try:
         analysis_id = request.cookies.get('analysis_id')
         if not analysis_id:
             return jsonify({'error': '쿠키에서 analysis_id를 찾을 수 없음'}), 400
-        # 템플릿 경로 및 API 경로 정의
-        template_path = f'templates/tabs/{tab_name}.html'
-        data_url = f"{sumUrl}/api/v1/analysis/{analysis_id}/{tab_name}"
-        headers = {'Content-Type': 'application/json'}
 
-        # 템플릿 파일 읽기
+        # 템플릿 경로 및 API 경로 정의
+        base_dir = os.path.abspath(os.path.dirname(__file__))
+        template_path = os.path.join(base_dir, 'templates', 'tabs', f'{tab_name}.html')
+
         with open(template_path, 'r', encoding='utf-8') as f:
             html = f.read()
+        data_url = f"{sumUrl}/api/v1/analysis/{analysis_id}/{tab_name}"
+        headers = {'Content-Type': 'application/json'}
 
         # 데이터 요청
         res = requests.get(data_url, headers=headers)
@@ -149,6 +141,10 @@ def analysis_tab(tab_name):
     except Exception as e:
         return jsonify({'error': f'서버 오류: {str(e)}'}), 500
 
+#모의대화
+@app.route('/chat')
+def chat():
+    return render_template('chat.html')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

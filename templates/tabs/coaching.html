@@ -1,0 +1,21 @@
+<div class="tab-container" v-if="loaded">
+    <h2 class="title">🎯 핵심 요약 전략</h2>
+    <table class="strategy-table">
+        <thead>
+        <tr>
+            <th>전략</th>
+            <th>내용</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="(item, i) in data.strategies" :key="i">
+            <td>{{ item.title }}</td>
+            <td>{{ item.content }}</td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="summary">{{ data.summary }}</p>
+    <div class="actions">
+        <button class="btn">모의대화하기</button>
+    </div>
+</div>

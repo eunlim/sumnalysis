@@ -1,0 +1,20 @@
+<div v-if="loaded" class="p-8 emotion-analysis">
+    <h2 class="emotion-title">🗣 {{ data.summary_line }}</h2>
+
+    <div class="emotion-box">
+        <h3 class="emotion-subtitle">감정 흐름 요약 포인트</h3>
+        <ul class="emotion-list">
+            <li v-for="(point, index) in data.points" :key="index">{{ point }}</li>
+        </ul>
+    </div>
+
+    <div class="emotion-box" v-if="data.timeline_data && data.timeline_data.length">
+        <h3 class="emotion-subtitle">감정 변화 그래프</h3>
+        <canvas id="emotionChart" class="emotion-chart"></canvas>
+    </div>
+
+    <div class="emotion-box" v-if="data.timeline_data && data.timeline_data.length">
+        <h3 class="emotion-subtitle">시기별 요약</h3>
+        <ul id="emotion-summary"></ul>
+    </div>
+</div>

@@ -1,0 +1,6 @@
+<div class="tab-container" v-if="loaded">
+    <h2 class="title">{{ data.message }}</h2>
+    <div class="notes" v-if="data.analysis">
+        <p v-for="(line, i) in data.analysis.split(/(?<=[.?!])\s+/)" :key="i">🟣{{ line }}</p>
+    </div>
+</div>
