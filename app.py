@@ -3,7 +3,7 @@ import requests
 import os
 
 app = Flask(__name__, static_folder='./static') #app 이라는 플라스크 객체 만들어줌
-ipurl = 'http://121.135.232.170:5000'
+
 sumUrl = 'https://adapting-optionally-mole.ngrok-free.app'
 
 # 메인
@@ -30,7 +30,7 @@ def sumInput2():
 def handle_file_upload():
 
     try:
-        url = f"{ipurl}/api/v1/analysis"
+        url = f"{sumUrl}/api/v1/analysis"
         ALLOWED_EXTENSIONS = ['.csv', '.txt','.png', '.jpg', '.jpeg']  # 허용 가능 파일
         text = None
         uploaded_file = None
@@ -83,7 +83,7 @@ def handle_file_upload():
 def analysis_status():
     try:
         analysis_id = request.cookies.get('analysis_id')
-        url = f"{ipurl}/api/v1/analysis/{analysis_id}/status"
+        url = f"{sumUrl}/api/v1/analysis/{analysis_id}/status"
         headers = {'Content-Type': 'application/json'}
         res = requests.get(url, headers=headers)
 
@@ -103,7 +103,7 @@ def analysis_status():
 def analysis_score():
     try:
         analysis_id = request.cookies.get('analysis_id')
-        url = f"{ipurl}/api/v1/analysis/{analysis_id}/score"
+        url = f"{sumUrl}/api/v1/analysis/{analysis_id}/score"
         headers = {'Content-Type': 'application/json'}
         res = requests.get(url, headers=headers)
 
@@ -126,7 +126,7 @@ def analysis_tab(tab_name):
             return jsonify({'error': '쿠키에서 analysis_id를 찾을 수 없음'}), 400
         # 템플릿 경로 및 API 경로 정의
         template_path = f'templates/tabs/{tab_name}.html'
-        data_url = f"{ipurl}/api/v1/analysis/{analysis_id}/{tab_name}"
+        data_url = f"{sumUrl}/api/v1/analysis/{analysis_id}/{tab_name}"
         headers = {'Content-Type': 'application/json'}
 
         # 템플릿 파일 읽기
