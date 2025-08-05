@@ -26,6 +26,8 @@ def handle_file_upload():
         ALLOWED_EXTENSIONS = ['.csv', '.txt','.png', '.jpg', '.jpeg']  # 허용 가능 파일
         uploaded_file = None
         result_id = None
+        files = {}
+        data = {}
 
         # 값 체크
         text_input = request.form.get('text')
@@ -39,18 +41,14 @@ def handle_file_upload():
             ext = os.path.splitext(uploaded_file.filename)[1].lower()
             if ext not in ALLOWED_EXTENSIONS:
                 return jsonify({'error': f'허용되지 않은 파일 확장자입니다: {ext}'}), 400
+            files = {'conversation_file': uploaded_file.stream}
 
-            result_id = 'conversation_file'
-            files = {result_id: uploaded_file.stream}
-            res = requests.post(url, files=files, data={'coveration_text':''})
+        if text_input:
+            print("file ::", text_input)
+            data['conversation_text'] = text_input
 
-        elif text_input:
-            result_id = 'conversation_text'
-            data = {result_id: text_input}
-            res = requests.post(url, files={'conversation_file':''}, data=data, headers=headers)
 
-        else:
-            return jsonify({'error': '분석할 데이터가 없습니다.'}), 400
+        res = requests.post(url, files=files, data=data)
 
         if res.status_code == 202:
             response_data = res.json()
