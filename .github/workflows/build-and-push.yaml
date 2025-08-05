@@ -1,0 +1,54 @@
+name: CI - Build and Push Frontend Image
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ 'v*' ]  # v1, v1.2, v1.2.3 등 모두 감지
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image tags
+        id: extract_tag
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository }}
+          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
+
+          # 기본값
+          TAGS="${IMAGE_NAME}:latest"
+
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION_TAG=${GITHUB_REF#refs/tags/}
+            echo "is_tag=true" >> $GITHUB_ENV
+            TAGS="${IMAGE_NAME}:${VERSION_TAG},${IMAGE_NAME}:latest"
+
+            # 메이저 버전 추출: v2.0.1 → v2
+            MAJOR_TAG=$(echo $VERSION_TAG | grep -oE '^v[0-9]+')
+            if [[ -n "$MAJOR_TAG" ]]; then
+              TAGS="$TAGS,${IMAGE_NAME}:${MAJOR_TAG}"
+            fi
+          fi
+
+          echo "image_tags=${TAGS}" >> $GITHUB_ENV
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.image_tags }}
