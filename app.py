@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__, static_folder='./static') #app 이라는 플라스크 객체 만들어줌
 
-sumUrl = 'https://adapting-optionally-mole.ngrok-free.app'
+sumUrl = os.getenv('BACKEND_API_URL', 'https://adapting-optionally-mole.ngrok-free.app')
 
 # 메인
 @app.route('/')
