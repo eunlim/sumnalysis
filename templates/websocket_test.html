@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>❤️ 썸 연습하기 ❤️</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    h1 { font-size: 2rem; margin: 0.5em 0; }
+    .form-row { margin: 0.5em 0; }
+    label { display: inline-block; width: 100px; font-weight: bold; }
+    input, select, textarea { width: 220px; padding: 4px; }
+    button { background: black; color: white; border: none; padding: 0.75em 1.5em; font-size: 1rem; cursor: pointer; }
+    #chat-container { margin-top: 2em; width: 400px; max-width: 90%; border: 1px solid #ccc; padding: 1em; display: none; flex-direction: column; }
+    #messages { flex: 1; height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 0.5em; margin-bottom: 0.5em; }
+    .msg { margin: 0.25em 0; }
+    .msg.user { text-align: right; color: blue; }
+    .msg.ai { text-align: left; color: green; }
+    #input-row { display: flex; }
+    #input-row input { flex: 1; margin-right: 0.5em; }
+  </style>
+</head>
+<body>
+  <h1>❤️ 썸 연습하기 ❤️</h1>
+  <p>AI가 썸 상대가 되어드립니다. 썸 상대의 정보를 입력하세요.</p>
+
+  <div id="form-container">
+    <div class="form-row">
+      <label for="gender">성별</label>
+      <select id="gender">
+        <option value="" disabled selected>선택</option>
+        <option value="male">남</option>
+        <option value="female">여</option>
+        <option value="other">기타</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="age">나이</label>
+      <input type="number" id="age" min="10" max="100" placeholder="연령" />
+    </div>
+    <div class="form-row">
+      <label for="mbti">MBTI</label>
+      <input type="text" id="mbti" placeholder="예: ENFP" maxlength="4" />
+    </div>
+    <div class="form-row">
+      <label for="conversation">대화내용</label>
+      <textarea id="conversation" rows="3" placeholder="최근 대화 요약"></textarea>
+    </div>
+    <div class="form-row">
+      <label for="situation">상황</label>
+      <textarea id="situation" rows="2" placeholder="예) 퇴근 후 운동가는 길"></textarea>
+    </div>
+    <div class="form-row">
+      <label for="trait">테토-에겐 성향</label>
+      <textarea id="trait" rows="2" placeholder="예) 테토 / 에겐"></textarea>
+    </div>
+    <button id="start-btn">❤️ START ❤️</button>
+  </div>
+
+  <div id="chat-container">
+    <h2>AI 썸 상대와 대화하기</h2>
+    <div id="messages"></div>
+    <div id="input-row">
+      <input type="text" id="user-input" placeholder="메시지를 입력하세요…" />
+      <button id="send-btn">전송</button>
+    </div>
+  </div>
+
+<script>
+  const BASE_URL = 'https://adapting-optionally-mole.ngrok-free.app/api/v1';
+  const BASE_WS  = 'wss://adapting-optionally-mole.ngrok-free.app/api/v1/simulations/ws';
+
+  const form = {
+    gender:      document.getElementById('gender'),
+    age:         document.getElementById('age'),
+    mbti:        document.getElementById('mbti'),
+    conversation:document.getElementById('conversation'),
+    situation:   document.getElementById('situation'),
+    trait:       document.getElementById('trait'),
+    startBtn:    document.getElementById('start-btn'),
+    formContainer: document.getElementById('form-container'),
+    chatContainer: document.getElementById('chat-container'),
+    messages:    document.getElementById('messages'),
+    userInput:   document.getElementById('user-input'),
+    sendBtn:     document.getElementById('send-btn'),
+  };
+
+  let currentPersona = '썸상대', ws;
+
+  form.startBtn.addEventListener('click', async () => {
+    // 필수 입력 검사
+    if (!form.gender.value || !form.age.value ||
+        !form.mbti.value || !form.conversation.value.trim() ||
+        !form.situation.value.trim() || !form.trait.value.trim()) {
+      alert('모든 항목을 입력해주세요.');
+      return;
+    }
+
+    // 페르소나 명칭
+    if (form.gender.value === 'male')      currentPersona = '썸남';
+    else if (form.gender.value === 'female') currentPersona = '썸녀';
+    else                                     currentPersona = '썸상대';
+
+    // API에 보낼 페이로드에 trait 추가
+    const payload = {
+      gender:               form.gender.value,
+      age:                  Number(form.age.value),
+      mbti:                 form.mbti.value.toUpperCase(),
+      conversation_content: form.conversation.value,
+      situation:            form.situation.value,
+      trait:                form.trait.value
+    };
+
+    try {
+      const res = await fetch(`${BASE_URL}/simulations/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw await res.json();
+      const { session_id, initial_message } = await res.json();
+
+      form.formContainer.style.display = 'none';
+      form.chatContainer.style.display = 'flex';
+      appendMsg('ai', initial_message);
+
+      ws = new WebSocket(`${BASE_WS}/${session_id}`);
+
+      ws.onmessage = evt => {
+        const data = JSON.parse(evt.data);
+        appendMsg('ai', data.message);
+      };
+      ws.onclose = () => appendMsg('ai', '[대화가 종료되었습니다.]');
+
+    } catch (err) {
+      console.error(err);
+      alert('시작 실패: ' + (err.detail || err.message || err));
+    }
+  });
+
+  form.sendBtn.addEventListener('click', () => {
+    const text = form.userInput.value.trim();
+    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+    appendMsg('user', text);
+    ws.send(JSON.stringify({ message: text }));
+    form.userInput.value = '';
+  });
+
+  function appendMsg(who, text) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + who;
+    div.textContent = who === 'user'
+      ? `You: ${text}`
+      : `${currentPersona}: ${text}`;
+    form.messages.append(div);
+    form.messages.scrollTop = form.messages.scrollHeight;
+  }
+</script>
+</body>
+</html>

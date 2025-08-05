@@ -146,5 +146,12 @@ def analysis_tab(tab_name):
 def chat():
     return render_template('chat.html')
 
+
+# 테스트용 모의 대화
+@app.route('/test_chat')
+def test_chat():
+    return render_template('websocket_test.html')
+
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
