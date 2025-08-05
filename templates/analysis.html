@@ -1,111 +1,125 @@
+<!DOCTYPE html>
 <html lang="ko">
 {% include 'head.html' %}
-<body>
-<div id="app" v-cloak class="container mx-auto p-4">
-    <!-- 탭 메뉴 -->
-    <div class="flex justify-around mb-4 border-b pb-2" v-if="tabs.length">
-        <button v-for="tab in tabs" :key="tab.name"
-                :class="['px-4 py-2 font-semibold', currentTab === tab.name ? 'text-black-600 border-b-2 border-purple-600' : 'text-gray-500']"
-                @click="currentTab = tab.name">
-            [[ tab.label ]]
-        </button>
-    </div>
-    <!-- sumScore는 내부에서 직접 렌더링 -->
-    <sum-score v-if="currentTab === 'score'">
-        <div class="p-8 m-auto">
-            <h2 class="text-center text-3xl text-600 font-bold mb-2">🔥<span :style="{color: param.flame_color}" v-html="param.score + '%'"></span></h2>
-            <p class="text-center text-lg font-medium" v-text="param.summary"></p>
-        </div>
-    </sum-score>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+<div id="app" v-cloak class="max-w-5xl mx-auto p-6 space-y-6">
 
-    <!-- 나머지 탭은 외부 HTML로 불러옴 -->
-    <component v-else :is="dynamicComponent"> </component>
+  <!-- 탭 메뉴 -->
+  <nav class="flex justify-center space-x-8 border-b border-gray-200 dark:border-gray-700 pb-4">
+    <button
+      v-for="tab in tabs"
+      :key="tab.name"
+      @click="currentTab = tab.name"
+      class="relative pb-2 font-medium transition-colors duration-200 focus:outline-none"
+      :class="currentTab === tab.name ? 'text-purple-600 dark:text-purple-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+    >
+      [[ tab.label ]]
+      <span
+        v-if="currentTab === tab.name"
+        class="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded"
+      ></span>
+    </button>
+  </nav>
+
+  <!-- 썸 점수 -->
+  <sum-score v-if="currentTab === 'score'">
+    <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-8 text-center">
+      <h2 class="text-5xl font-extrabold mb-4">
+        🔥 <span :style="{ color: param.flame_color }" class="inline-block">[[ param.score ]]%</span>
+      </h2>
+      <p class="text-lg font-medium text-gray-600 dark:text-gray-400">[[ param.summary ]]</p>
+    </div>
+  </sum-score>
+
+  <!-- 동적 컴포넌트 -->
+  <component v-else :is="dynamicComponent"></component>
 </div>
+
 <style>
-    [v-cloak] { display: none; }
+  [v-cloak] { display: none; }
+  /* 예시: 차트 카드를 위한 클래스 */
+  .chart-card {
+    @apply bg-white dark:bg-gray-800 shadow-md rounded-lg p-6;
+  }
+  /* 요약 리스트 스타일링 */
+  .summary-list li {
+    @apply flex items-start space-x-2;
+  }
+  .summary-list li::before {
+    content: "";
+    @apply w-2 h-2 mt-2 rounded-full bg-purple-500;
+  }
 </style>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const { createApp, ref, watch, reactive, result } = Vue
-    // 외부 템플릿 로딩용 탭들
-    createApp({
-        delimiters: ['[[', ']]'],
-        components: {
+const { createApp, ref, watch, reactive } = Vue;
+createApp({
+  delimiters: ['[[', ']]'],
+  setup() {
+    const param = reactive(JSON.parse('{{ result | tojson | safe }}'));
+    const tabs = ref([
+      { name: 'score', label: '썸 점수' },
+      { name: 'emotion', label: '감정 분석' },
+      { name: 'highlight', label: '하이라이트' },
+      { name: 'coaching', label: 'AI 코치' }
+    ]);
+    const currentTab = ref('score');
+    const dynamicComponent = ref(null);
 
-        },
-        setup() {
-            const param = reactive(JSON.parse('{{ result | tojson | safe }}'))
-            const tabs = ref([
-                { name: 'score', label: '썸 점수' },
-                { name: 'emotion', label: '감정 분석' },
-                { name: 'highlight', label: '하이라이트' },
-                { name: 'coaching', label: 'AI 코치' }
-            ])
-            const currentTab = ref('score')
-            const dynamicComponent = ref(null)
-            const fetchDynamicComponent = async (tabName) => {
-                const res = await axios.get(`/api/v1/analysis/${tabName}`)
-                const html = res.data.template
-                const data = res.data.result
-                const container = document.createElement('div')
-                container.innerHTML = html
-                const template = container.querySelector('template')?.innerHTML || html
+    const fetchDynamicComponent = async (tabName) => {
+      const res = await axios.get(`/api/v1/analysis/${tabName}`);
+      const html = res.data.template;
+      const data = res.data.result;
+      dynamicComponent.value = {
+        data() { return { data, loaded: true }} ,
+        mounted() {
+          if (tabName === 'emotion') {
+            this.$nextTick(() => {
+              // 요약 채우기
+              const el = document.getElementById('emotion-summary');
+              const periods = ['initial','middle','final'];
+              const labels = ['초기','중기','후기'];
+              el.innerHTML = periods.map((p,i) =>
+                `<li><strong>${labels[i]}:</strong> ${data.period_summary[p]}</li>`
+              ).join('');
 
-                dynamicComponent.value = {
-                    data() {
-                        return { data, loaded: true }
-                    },
-                    mounted() {
-                        console.log('tabName', tabName)
-                        if (tabName === 'emotion') {
-                            this.$nextTick(() => {
-                                const summaryEl = document.getElementById('emotion-summary')
-                                if (summaryEl && data.period_summary) {
-                                    const points = [
-                                        { label: '초기', text: data.period_summary.initial },
-                                        { label: '중기', text: data.period_summary.middle },
-                                        { label: '후기', text: data.period_summary.final }
-                                    ]
-                                    summaryEl.innerHTML = points.map(p => `<li><strong>${p.label}:</strong> ${p.text}</li>`).join('')
-                                }
-
-                                const ctx = document.getElementById('emotionChart')?.getContext('2d')
-                                if (!ctx) return
-
-                                const emotionFields = Object.keys(data.timeline_data[0] || {}).filter(k => k !== 'date')
-                                const colors = ['#ff6384', '#36a2eb', '#ffcd56', '#c9cbcf', '#4bc0c0']
-
-                                new Chart(ctx, {
-                                    type: 'line',
-                                    data: {
-                                        labels: data.timeline_data.map(d => d.date),
-                                        datasets: emotionFields.map((key, idx) => ({
-                                            label: key,
-                                            data: data.timeline_data.map(d => d[key]),
-                                            borderColor: colors[idx % colors.length],
-                                            tension: 0.3
-                                        }))
-                                    },
-                                    options: {
-                                        responsive: true,
-                                        plugins: {
-                                            legend: { position: 'top' },
-                                            title: { display: true, text: '🕰️ 감정 변화 추이' }
-                                        }
-                                    }
-                                })
-                            })
-                        }
-                    },
-                   template:html
+              // 차트 그리기
+              const ctx = document.getElementById('emotionChart')?.getContext('2d');
+              if (!ctx) return;
+              new Chart(ctx, {
+                type: 'line',
+                data: {
+                  labels: data.timeline_data.map(d => d.date),
+                  datasets: Object.keys(data.timeline_data[0]).filter(k => k!=='date')
+                    .map((key,i) => ({
+                      label: key,
+                      data: data.timeline_data.map(d=>d[key]),
+                      borderColor: ['#D53F8C','#7F5AF0','#FFB547','#38BDF8'][i%4],
+                      tension: 0.4,
+                      pointRadius: 4,
+                    }))
+                },
+                options: {
+                  responsive: true,
+                  plugins: {
+                    legend:{ position:'bottom', labels:{boxWidth:12, padding:16} },
+                    title:{ display:true, text:'🕰️ 감정 변화 추이', font:{size:18, weight:'600'} }
+                  },
+                  scales:{ x:{grid:{display:false}}, y:{beginAtZero:true} }
                 }
-            }
-            watch(currentTab, (val) => {
-                if (val !== 'score') fetchDynamicComponent(val)
-            })
-            return { tabs, currentTab, dynamicComponent, param }
-        }
-    }).mount('#app')
+              });
+            });
+          }
+        },
+        template: html
+      };
+    };
+
+    watch(currentTab, (val) => { if(val!=='score') fetchDynamicComponent(val); });
+    return { tabs, currentTab, dynamicComponent, param };
+  }
+}).mount('#app');
 </script>
 </body>
 </html>
