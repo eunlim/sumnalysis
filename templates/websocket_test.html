@@ -11,12 +11,15 @@
     input, select, textarea { width: 220px; padding: 4px; }
     button { background: black; color: white; border: none; padding: 0.75em 1.5em; font-size: 1rem; cursor: pointer; }
     #chat-container { margin-top: 2em; width: 400px; max-width: 90%; border: 1px solid #ccc; padding: 1em; display: none; flex-direction: column; }
-    #messages { flex: 1; height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 0.5em; margin-bottom: 0.5em; }
+    #messages { flex: 1; height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 0.5em; margin-bottom: 0.5em; display: flex; flex-direction: column; }
     .msg { margin: 0.25em 0; }
     .msg.user { text-align: right; color: blue; }
     .msg.ai { text-align: left; color: green; }
     #input-row { display: flex; }
     #input-row input { flex: 1; margin-right: 0.5em; }
+    .score-marker { display: flex; align-items: center; margin: 0.5em 0; }
+    .score-marker .line { flex: 1; height: 1px; background: #ccc; }
+    .score-marker .label { margin-left: 8px; font-weight: bold; color: #333; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -24,13 +27,11 @@
   <p>AI가 썸 상대가 되어드립니다. 썸 상대의 정보를 입력하세요.</p>
 
   <div id="form-container">
-    <!-- 프롬프트 편집 -->
     <div class="form-row">
       <label for="prompt-edit">커스텀 프롬프트</label>
       <textarea id="prompt-edit" rows="2" placeholder="새로운 프롬프트를 입력하세요"></textarea>
     </div>
     <button id="edit-btn">프롬프트 수정</button>
-
 
     <div class="form-row">
       <label for="gender">성별</label>
@@ -71,6 +72,7 @@
       <input type="text" id="user-input" placeholder="메시지를 입력하세요…" />
       <button id="send-btn">전송</button>
     </div>
+    <button id="eval-btn" style="margin-top: 1em;">평가하기</button>
   </div>
 
 <script>
@@ -78,33 +80,31 @@
   const BASE_WS  = 'wss://adapting-optionally-mole.ngrok-free.app/api/v1/simulations/ws';
 
   const form = {
-    promptEdit:   document.getElementById('prompt-edit'),
-    editBtn:      document.getElementById('edit-btn'),
-    gender:      document.getElementById('gender'),
-    age:         document.getElementById('age'),
-    mbti:        document.getElementById('mbti'),
-    conversation:document.getElementById('conversation'),
-    situation:   document.getElementById('situation'),
-    trait:       document.getElementById('trait'),
-    startBtn:    document.getElementById('start-btn'),
+    promptEdit:    document.getElementById('prompt-edit'),
+    editBtn:       document.getElementById('edit-btn'),
+    gender:        document.getElementById('gender'),
+    age:           document.getElementById('age'),
+    mbti:          document.getElementById('mbti'),
+    conversation:  document.getElementById('conversation'),
+    situation:     document.getElementById('situation'),
+    trait:         document.getElementById('trait'),
+    startBtn:      document.getElementById('start-btn'),
     formContainer: document.getElementById('form-container'),
     chatContainer: document.getElementById('chat-container'),
-    messages:    document.getElementById('messages'),
-    userInput:   document.getElementById('user-input'),
-    sendBtn:     document.getElementById('send-btn'),
+    messages:      document.getElementById('messages'),
+    userInput:     document.getElementById('user-input'),
+    sendBtn:       document.getElementById('send-btn'),
+    evalBtn:       document.getElementById('eval-btn'),
   };
-   // 1) 프롬프트 수정 버튼
+
+  // 프롬프트 수정
   form.editBtn.addEventListener('click', async () => {
     const newPrompt = form.promptEdit.value.trim();
-    if (!newPrompt) {
-      alert('프롬프트를 입력해주세요.');
-      return;
-    }
-
+    if (!newPrompt) return alert('프롬프트를 입력해주세요.');
     try {
       const res = await fetch(`${BASE_URL}/simulations/prompt_edit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ prompt: newPrompt })
       });
       if (res.ok) {
@@ -112,82 +112,117 @@
         form.promptEdit.value = '';
       } else {
         const err = await res.json();
-        alert('수정 실패: ' + (err.error || res.status));
+        alert('수정 실패: ' + (err.error||res.status));
       }
-    } catch (e) {
+    } catch(e) {
       console.error(e);
-      alert('통신 오류가 발생했습니다.');
+      alert('통신 오류');
     }
   });
 
   let currentPersona = '썸상대', ws;
+  let sessionId = null;
 
+  // 대화 시작
   form.startBtn.addEventListener('click', async () => {
-    // 필수 입력 검사
-    if (!form.gender.value || !form.age.value ||
-        !form.mbti.value || !form.conversation.value.trim() ||
-        !form.situation.value.trim() || !form.trait.value.trim()) {
-      alert('모든 항목을 입력해주세요.');
-      return;
+    if (!form.gender.value||!form.age.value||
+        !form.mbti.value||!form.conversation.value.trim()||
+        !form.situation.value.trim()||!form.trait.value.trim()) {
+      return alert('모든 항목을 입력해주세요.');
     }
+    currentPersona = form.gender.value==='male' ? '썸남'
+                   : form.gender.value==='female' ? '썸녀'
+                   : '썸상대';
 
-    // 페르소나 명칭
-    if (form.gender.value === 'male')      currentPersona = '썸남';
-    else if (form.gender.value === 'female') currentPersona = '썸녀';
-    else                                     currentPersona = '썸상대';
-
-    // API에 보낼 페이로드에 trait 추가
     const payload = {
-      gender:               form.gender.value,
-      age:                  Number(form.age.value),
-      mbti:                 form.mbti.value.toUpperCase(),
+      gender: form.gender.value,
+      age: Number(form.age.value),
+      mbti: form.mbti.value.toUpperCase(),
       conversation: form.conversation.value,
-      situation:            form.situation.value,
-      trait:                form.trait.value
+      situation: form.situation.value,
+      trait: form.trait.value
     };
 
     try {
       const res = await fetch(`${BASE_URL}/simulations/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
       });
       if (!res.ok) throw await res.json();
       const { session_id, initial_message } = await res.json();
+      sessionId = session_id;
 
       form.formContainer.style.display = 'none';
       form.chatContainer.style.display = 'flex';
+      form.messages.innerHTML = '';
       appendMsg('ai', initial_message);
 
       ws = new WebSocket(`${BASE_WS}/${session_id}`);
-
-      ws.onmessage = evt => {
-        const data = JSON.parse(evt.data);
-        appendMsg('ai', data.message);
-      };
-      ws.onclose = () => appendMsg('ai', '[대화가 종료되었습니다.]');
-
-    } catch (err) {
+      ws.onmessage = evt => appendMsg('ai', JSON.parse(evt.data).message);
+      ws.onclose   = () => appendMsg('ai','[대화가 종료되었습니다.]');
+    } catch(err) {
       console.error(err);
-      alert('시작 실패: ' + (err.detail || err.message || err));
+      alert('시작 실패: '+(err.detail||err.message||err));
     }
   });
 
+  // 메시지 전송
   form.sendBtn.addEventListener('click', () => {
-    const text = form.userInput.value.trim();
-    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
-    appendMsg('user', text);
-    ws.send(JSON.stringify({ message: text }));
+    const txt = form.userInput.value.trim();
+    if(!txt||!ws||ws.readyState!==WebSocket.OPEN) return;
+    appendMsg('user', txt);
+    ws.send(JSON.stringify({ message: txt }));
     form.userInput.value = '';
   });
+  // 엔터키로도 메시지 전송
+  form.userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();      // 기본 줄바꿈 방지
+      form.sendBtn.click();    // 클릭 핸들러 호출
+    }
+  });
 
+  // 평가하기
+  form.evalBtn.addEventListener('click', async () => {
+    if(!sessionId) return alert('먼저 START 버튼을 눌러주세요.');
+    try {
+      const res = await fetch(`${BASE_URL}/simulations/evaluate`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ session_id: sessionId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail||data.error||`HTTP ${res.status}`);
+      appendMarker(data.score);
+    } catch(err) {
+      console.error(err);
+      appendMarker(`에러: ${err.message}`);
+    }
+  });
+
+  // 메시지 추가 헬퍼
   function appendMsg(who, text) {
     const div = document.createElement('div');
     div.className = 'msg ' + who;
-    div.textContent = who === 'user'
-      ? `You: ${text}`
-      : `${currentPersona}: ${text}`;
+    div.textContent = who==='user' ? `You: ${text}` : `${currentPersona}: ${text}`;
     form.messages.append(div);
+    form.messages.scrollTop = form.messages.scrollHeight;
+  }
+
+  // 평가 마커 추가
+  function appendMarker(score) {
+    const marker = document.createElement('div');
+    marker.className = 'score-marker';
+    const line = document.createElement('div');
+    line.className = 'line';
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = typeof score === 'number'
+      ? `평가: ${score}점`
+      : score;
+    marker.append(line, label);
+    form.messages.append(marker);
     form.messages.scrollTop = form.messages.scrollHeight;
   }
 </script>
