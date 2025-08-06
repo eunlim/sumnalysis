@@ -2,52 +2,170 @@
 <html lang="ko">
 {% include 'head.html' %}
 <body class="bg-white text-gray-900">
-<div id="app">
-    <div class="flex flex-col md:flex-row min-h-screen">
-        <!-- 채팅 영역 -->
-        <div class="w-full md:w-2/3 p-6 flex flex-col mx-auto">
-            <h2 class="text-3xl font-bold text-purple-700 mb-6">💬모의대화💜</h2>
-
-            <div class="flex-1 overflow-y-auto space-y-4 max-h-[60vh] px-2">
-                <!-- 사용자 메시지 -->
-                <div class="self-end bg-purple-200 text-purple-900 px-4 py-2 rounded-xl max-w-md w-fit break-words shadow">
-                    헐… 방금 스토리 본 건데, 거기 어디야? 분위기 너무 좋다… 사진도 예쁘고 사람도 예쁘고 😳📸
+    <div id="app" v-cloak>
+        <div id="summ-page" class="container" v-if="!sessionStarted">
+            <h1>썸 연습하기<span class="heart">❤️</span></h1>
+            <p>AI가 썸 상대가 되어드립니다. 썸 상대의 정보를 입력해주세요!</p>
+            <div calss="container" style="width:100%; max-width:500px;">
+                <div class="flex items-center gap-2 mb-3">
+                    <label>커스텀 프롬프트</label>
+                    <textarea v-model="promptEdit" rows="2" class="flex-1 border rounded px-2 py-1" placeholder="새로운 프롬프트를 입력하세요"></textarea>
                 </div>
-
-                <!-- 상대방 응답 -->
-                <div class="ml-auto self-start bg-white border border-gray-300 px-4 py-2 rounded-xl max-w-md w-fit break-words shadow">
-                    알아서 뭐하게
+                <button @click="editPrompt" class="btn mt-2 mb-3">프롬프트 수정</button>
+                <div class="flex items-center gap-2 mb-3">
+                    <label class="w-24 text-sm font-medium text-right">성별</label>
+                    <select v-model="form.gender" class="flex-1 border rounded px-2 py-1">
+                        <option disabled value="">선택</option>
+                        <option value="male">남</option>
+                        <option value="female">여</option>
+                        <option value="other">기타</option>
+                    </select>
                 </div>
-
-                <!-- 사용자 후속 메시지 -->
-                <div class="self-end bg-purple-200 text-purple-900 px-4 py-2 rounded-xl max-w-md w-fit break-words shadow">
-                    대답이 너무 쿨해서 심장이 식을 뻔...🥶<br>
-                    근데 혹시… 다음엔 나랑 같이 가줄 수 있어?<br>
-                    커피는 너가 골라주고, 사진은 내가 찍을게 📷☕
+                <div class="flex items-center gap-2 mb-3">
+                    <label class="w-24 text-sm font-medium text-right">나이</label>
+                    <input type="number" v-model="form.age" class="flex-1 border rounded px-2 py-1" placeholder="연령">
+                </div>
+                <div class="flex items-center gap-2 mb-3">
+                    <label class="w-24 text-sm font-medium text-right">MBTI</label>
+                    <input type="text" v-model="form.mbti" class="flex-1 border rounded px-2 py-1" placeholder="예: ENFP" maxlength="4">
+                </div>
+                <div class="flex items-center gap-2 mb-3">
+                    <label class="w-24 text-sm font-medium text-right">대화내용</label>
+                    <textarea v-model="form.conversation" class="flex-1 border rounded px-2 py-1" rows="2" placeholder="최근 대화 요약"></textarea>
+                </div>
+                <div class="flex items-center gap-2 mb-3">
+                    <label class="w-24 text-sm font-medium text-right">상황</label>
+                    <textarea v-model="form.situation" class="flex-1 border rounded px-2 py-1" rows="2" placeholder="예) 퇴근 후 운동가는 길"></textarea>
+                </div>
+                <div class="flex items-center gap-2 mb-3">
+                    <label class="w-24 text-sm font-medium text-right">테토-에겐 성향</label>
+                    <textarea v-model="form.trait" class="flex-1 border rounded px-2 py-1" rows="2" placeholder="예) 테토 / 에겐"></textarea>
+                </div>
+                <button class="btn mt-4" @click="startConversation">❤️ START ❤️</button>
+            </div>
+        </div>
+        <div id="summ-page" v-else>
+            <h1>{{ currentPersona }}와 대화하기 <span class="heart">💬</span></h1>
+            <div id="messages" style="max-height: 300px; overflow-y: auto; background: #fff; padding: 1rem; border-radius: 1rem;">
+                <div v-for="(msg, i) in messages" :key="i" :class="['msg', msg.role]">
+                    <div>[[ msg.role === 'user' ? '나' : currentPersona ]]: [[ msg.text || '' ]]</div>
                 </div>
             </div>
-
-            <form @submit.prevent class="mt-6 flex w-full max-w-full">
-                <input v-model="userMessage" type="text" placeholder="메시지를 입력하세요..." class="flex-1 px-4 py-3 rounded-l-xl border border-gray-300 outline-none" />
-                <button class="bg-purple-600 text-white px-6 py-3 rounded-r-xl hover:bg-purple-700 transition">전송</button>
-            </form>
+            <div class="button-group">
+                <input v-model="userInput" @keydown.enter.prevent="sendMessage" placeholder="메시지...">
+                <button @click="sendMessage">전송</button>
+                <button @click="evaluateSession">평가하기</button>
+            </div>
         </div>
-
-        <!-- 분석 패널 컴포넌트 분리 -->
-{#        <aside class="hidden md:block md:w-1/3 bg-white border-l border-gray-200 p-6 space-y-4">#}
-{#            {% include 'analysis.html' %}#}
-{#        </aside>#}
     </div>
-</div>
+    <script>
+        const { createApp, ref, reactive } = Vue;
 
-<script>
-    const { createApp, ref } = Vue;
-    createApp({
-        setup() {
-            const userMessage = ref("미아네");
-            return { userMessage };
-        }
-    }).mount('#app');
-</script>
+        createApp({
+            delimiters: ['[[', ']]'],
+            setup() {
+
+                const BASE_URL = 'https://adapting-optionally-mole.ngrok-free.app/api/v1';
+                const BASE_WS  = 'wss://adapting-optionally-mole.ngrok-free.app/api/v1/simulations/ws';
+
+                const promptEdit = ref('');
+                const sessionStarted = ref(false);
+                const currentPersona = ref('썸상대');
+                const sessionId = ref(null);
+                const ws = ref(null);
+                const userInput = ref('');
+                const messages = ref([]);
+                const form = reactive({gender: '', age: '', mbti: '', conversation: '', situation: '', trait: ''});
+                const appendMsg = (role, text) => {
+                    messages.value.push({ role, text });
+                    setTimeout(() => {
+                        const container = document.getElementById('messages');
+                        if (container) container.scrollTop = container.scrollHeight;
+                    }, 50);
+                };
+
+                const appendMarker = (score) => {
+                    messages.value.push({ role: 'ai', text: typeof score === 'number' ? `평가: ${score}점` : score });
+                };
+
+                const editPrompt = async () => {
+                    if (!promptEdit.value.trim()) return alert('프롬프트 입력하세요');
+                    try {
+                        await axios.post('/api/proxy/prompt_edit', { prompt: promptEdit.value });
+                        alert('프롬프트 수정 완료');
+                        promptEdit.value = '';
+                    } catch (err) {
+                        alert('수정 실패');
+                    }
+                };
+
+                const startConversation = async () => {
+                    if (!form.gender || !form.age || !form.mbti || !form.conversation || !form.situation || !form.trait) {
+                        alert('모든 항목을 입력하세요'); return;
+                    }
+                    currentPersona.value = form.gender === 'male' ? '썸남' : form.gender === 'female' ? '썸녀' : '썸상대';
+                    try {
+                        const res = await axios.post('/api/proxy/start', {
+                            gender: form.gender,
+                            age: Number(form.age),
+                            mbti: form.mbti.toUpperCase(),
+                            conversation: form.conversation,
+                            situation: form.situation,
+                            trait: form.trait,
+                        });
+                        sessionId.value = res.session_id;
+                        sessionStarted.value = true;
+                        appendMsg('ai', res.initial_message);
+
+                        await axios.post('/api/proxy/send_message', {
+                            session_id: sessionId.value,
+                            message: userInput.value
+                        });
+                        sessionId.value = res.session_id;
+                        sessionStarted.value = true;
+                        appendMsg('ai', res.initial_message);
+                    } catch (err) {
+                        alert('시작 실패');
+                    }
+                };
+
+                const sendMessage = async () => {
+                    const msg = userInput.value.trim();
+                    if (!msg) return;
+
+                    appendMsg('user', msg);
+                    userInput.value = '';
+
+                    try {
+                        const res = await axios.post('/api/proxy/send_message', {
+                            session_id: sessionId.value,
+                            message: msg
+                        });
+
+                        if (res.reply) {
+                            appendMsg('ai', res.reply);
+                        }
+                    } catch (err) {
+                        appendMsg('ai', '[응답 실패]');
+                    }
+                };
+
+                const evaluateSession = async () => {
+                    if (!sessionId.value) return alert('먼저 START 하세요');
+                    try {
+                        const res = await axios.post(`${BASE_URL}/simulations/evaluate`, { session_id: sessionId.value });
+                        appendMarker(res.data.score);
+                    } catch (err) {
+                        appendMarker(`에러: ${err.message}`);
+                    }
+                };
+
+                return {
+                    form, promptEdit, sessionStarted, currentPersona,userInput, messages,
+                    editPrompt, startConversation, sendMessage, evaluateSession
+                };
+            }
+        }).mount('#app');
+    </script>
 </body>
 </html>

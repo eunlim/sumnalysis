@@ -186,7 +186,18 @@ body {
     background: #7b2cbf;
 }
 
-/* ✅ 반응형: 모바일 대응 */
+.msg.user {
+    text-align: right;
+    color: #333;
+    margin-bottom: 5px;
+}
+.msg.ai {
+    text-align: left;
+    color: #444;
+    margin-bottom: 5px;
+}
+
+/* 반응형: 모바일 대응 */
 @media (max-width: 480px) {
     #summ-page h1 {
         font-size: 2rem;
