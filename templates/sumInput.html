@@ -18,6 +18,14 @@
 
 <script type="module">
     import { createApp, ref, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+
+    // getCookei 추가
+    function getCookie(name) {
+    const match = document.cookie.match(
+      new RegExp('(?:^|; )' + name.replace(/([.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)')
+    );
+    return match ? decodeURIComponent(match[1]) : null;
+  }
     createApp({
         setup() {
             const text = ref('')
