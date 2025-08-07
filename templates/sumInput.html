@@ -14,7 +14,10 @@
     <img id="preview" />
     <button class="submit" @click="submit">분석 제출</button>
     <button class="ml-3 btn" @click="goToChat">모의대화하기</button>
-    <p id="loading" style="display: none;">로딩 중...</p>
+    <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p>분석 중입니다...</p>
+    </div>
 </div>
 
 <script type="module">
@@ -56,32 +59,36 @@
                 const form = new FormData()
                 if (text.value) form.append('text', text.value)
                 if (file.value) form.append('file', file.value)
-
                 const loadingEl = document.getElementById('loading')
-                loadingEl.style.display = 'block'
+                loadingEl.classList.remove('hidden')
+
                 try {
+                    var statusRes =  null;
                     const res = await axios.post('/api/v1/analysis', form)
                     console.log("res::::", res)
-                    var statusRes =  null;
                     const intervalId = setInterval(async () => {
                         try {
-                            const analysis_id = getCookie('analysis_id');
                             const statusRes = await axios.get('/api/v1/analysis/status');
                             console.log("isComplete::::", statusRes.data);
                             if (statusRes.data.status === "completed") {
+                                loadingEl.classList.add('hidden')
                                 clearInterval(intervalId);
                                 window.location.href = '/api/v1/analysis/score';
+                            }else {
+                                console.log("processing")
+                                loadingEl.classList.remove('hidden')
                             }
                         } catch (err) {
                             console.error('상태 확인 중 오류', err);
                             clearInterval(intervalId);
+                            loadingEl.classList.add('hidden')
                         }
                     }, 1000);
 
                 } catch {
                     alert('업로드 실패')
                 } finally {
-                    loadingEl.style.display = 'none'
+                    loadingEl.classList.add('hidden')
                 }
             }
             return {
