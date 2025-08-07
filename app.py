@@ -38,14 +38,19 @@ def handle_file_upload():
         text_input = request.form.get('text')
         uploaded_file = request.files.get('file')
 
-        if not text_input and not uploaded_file:
-            return jsonify({'error': '파일 또는 글자를 입력후 버튼을 눌러주세요.'}), 400
+        if not text_input:
+            return jsonify({'error': '글자 입력후 버튼을 눌러주세요.'}), 400
+
+        if not uploaded_file:
+            return jsonify({'error': '파일 입력후 버튼을 눌러주세요.'}), 400
 
         if uploaded_file:
             print("file ::", uploaded_file.filename)
             ext = os.path.splitext(uploaded_file.filename)[1].lower()
+
             if ext not in ALLOWED_EXTENSIONS:
                 return jsonify({'error': f'허용되지 않은 파일 확장자입니다: {ext}'}), 400
+
             files = {'conversation_file': uploaded_file.stream}
 
         if text_input:
@@ -181,7 +186,7 @@ def proxy_start():
         # 외부 API에 시뮬레이션 시작 요청
         user_data = request.get_json()
         res = requests.post(url = f"{sumUrl}/api/v1/simulations/start", json=user_data)
-        if res.status_code == 202 :
+        if res.status_code == 201:
             data = res.json()
             session_id = data['session_id']
 
@@ -219,13 +224,28 @@ def send_message():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# 평가하기
+@app.route('/api/v1/evaluateSession', methods=['POST'])
+def evaluateSession():
+    try :
+        headers = {'Content-Type': 'application/json'}
+        data = request.get_json()
+        session_id = data.get('session_id')
+        url = f"{sumUrl}/api/v1/simulations/evaluate"
+        res = requests.post(url, headers=headers, json={'session_id': session_id})
+        if res.status_code == 201 :
+            print("res::::",res.json())
+            return jsonify(res.json())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # session 종료
 @app.route('/api/proxy/end_session', methods=['POST'])
 def end_session():
     data = request.get_json()
     session_id = data.get('session_id')
-
     ws = ws_sessions.get(session_id)
+
     if not ws:
         return jsonify({'error': 'WebSocket 세션 없음'}), 404
 

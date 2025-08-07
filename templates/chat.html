@@ -45,16 +45,25 @@
             </div>
         </div>
         <div id="summ-page" v-else>
-            <h1>{{ currentPersona }}와 대화하기 <span class="heart">💬</span></h1>
+            <h1>[[ currentPersona ]]와 대화하기 <span class="heart">💬</span></h1>
             <div id="messages" style="max-height: 300px; overflow-y: auto; background: #fff; padding: 1rem; border-radius: 1rem;">
                 <div v-for="(msg, i) in messages" :key="i" :class="['msg', msg.role]">
-                    <div>[[ msg.role === 'user' ? '나' : currentPersona ]]: [[ msg.text || '' ]]</div>
+                    <div v-if="msg.role === 'user' || msg.role === 'ai'" class="bubble">
+                        [[ msg.text || '' ]]
+                    </div>
+                    <div v-else-if="msg.role === 'marker'" class="marker-line with-lines">
+                        <div class="line"></div>
+                        <div :class="['marker-label', msg.color]">
+                            💯 [[ msg.text ]]
+                        </div>
+                        <div class="line"></div>
+                    </div>
                 </div>
-            </div>
-            <div class="button-group">
-                <input v-model="userInput" @keydown.enter.prevent="sendMessage" placeholder="메시지...">
-                <button @click="sendMessage">전송</button>
-                <button @click="evaluateSession">평가하기</button>
+                <div class="chat-input-area">
+                    <input v-model="userInput" @keydown.enter.prevent="sendMessage" placeholder="메시지...">
+                    <button class="btn" @click="sendMessage">전송</button>
+                    <button class="btn" @click="evaluateSession">평가하기</button>
+                </div>
             </div>
         </div>
     </div>
@@ -64,15 +73,10 @@
         createApp({
             delimiters: ['[[', ']]'],
             setup() {
-
-                const BASE_URL = 'https://adapting-optionally-mole.ngrok-free.app/api/v1';
-                const BASE_WS  = 'wss://adapting-optionally-mole.ngrok-free.app/api/v1/simulations/ws';
-
                 const promptEdit = ref('');
                 const sessionStarted = ref(false);
                 const currentPersona = ref('썸상대');
-                const sessionId = ref(null);
-                const ws = ref(null);
+                const session_Id = ref(null);
                 const userInput = ref('');
                 const messages = ref([]);
                 const form = reactive({gender: '', age: '', mbti: '', conversation: '', situation: '', trait: ''});
@@ -85,7 +89,20 @@
                 };
 
                 const appendMarker = (score) => {
-                    messages.value.push({ role: 'ai', text: typeof score === 'number' ? `평가: ${score}점` : score });
+                    let color = 'yellow'; // 기본값
+                    if (typeof score === 'number') {
+                        if (score >= 90) color = 'green';
+                        else if (score < 60) color = 'red';
+                    }
+                    messages.value.push({
+                        role: 'marker',
+                        text: typeof score === 'number' ? `평가: ${score}점` : score,
+                        color
+                    });
+                    setTimeout(() => {
+                        const container = document.getElementById('messages');
+                        if (container) container.scrollTop = container.scrollHeight;
+                    }, 50);
                 };
 
                 const editPrompt = async () => {
@@ -100,6 +117,7 @@
                 };
 
                 const startConversation = async () => {
+
                     if (!form.gender || !form.age || !form.mbti || !form.conversation || !form.situation || !form.trait) {
                         alert('모든 항목을 입력하세요'); return;
                     }
@@ -113,48 +131,51 @@
                             situation: form.situation,
                             trait: form.trait,
                         });
-                        sessionId.value = res.session_id;
-                        sessionStarted.value = true;
-                        appendMsg('ai', res.initial_message);
 
-                        await axios.post('/api/proxy/send_message', {
+                        if (res.status === 200) {
+                            session_id = res.data.session_id;
+                            sessionStarted.value = true;
+                            appendMsg('ai', res.data.initial_message);
+                        }
+
+                        const sendRes = await axios.post('/api/proxy/send_message', {
                             session_id: sessionId.value,
                             message: userInput.value
                         });
-                        sessionId.value = res.session_id;
-                        sessionStarted.value = true;
-                        appendMsg('ai', res.initial_message);
+
+                        if (sendRes.status === 200 && res.data.reply !== null) {
+                            sessionStarted.value = true;
+                            appendMsg('ai', res.data.reply);
+                        }
                     } catch (err) {
                         alert('시작 실패');
                     }
                 };
 
                 const sendMessage = async () => {
-                    const msg = userInput.value.trim();
-                    if (!msg) return;
 
+                    const msg = userInput.value.trim();
+
+                    if (!msg) return;
                     appendMsg('user', msg);
                     userInput.value = '';
-
                     try {
                         const res = await axios.post('/api/proxy/send_message', {
-                            session_id: sessionId.value,
+                            session_id: session_id,
                             message: msg
                         });
+                        if (res.status === 200 && res.data.reply !== null) appendMsg('ai', res.data.reply);
 
-                        if (res.reply) {
-                            appendMsg('ai', res.reply);
-                        }
                     } catch (err) {
                         appendMsg('ai', '[응답 실패]');
                     }
                 };
 
                 const evaluateSession = async () => {
-                    if (!sessionId.value) return alert('먼저 START 하세요');
+                    if (!session_Id) return alert('먼저 START 하세요');
                     try {
-                        const res = await axios.post(`${BASE_URL}/simulations/evaluate`, { session_id: sessionId.value });
-                        appendMarker(res.data.score);
+                        const res = await axios.post(`/api/v1/evaluateSession`, {  session_id: session_id });
+                        if (res.status === 200 && res.data.score !== null)  appendMarker(res.data.score);
                     } catch (err) {
                         appendMarker(`에러: ${err.message}`);
                     }
