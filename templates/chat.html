@@ -3,7 +3,7 @@
 {% include 'head.html' %}
 <body class="bg-white text-gray-900">
     <div id="app" v-cloak>
-        <div id="summ-page" class="container" v-if="!sessionStarted">
+        <div id="summ-page" class="container chat" v-if="!sessionStarted">
             <h1>썸 연습하기<span class="heart">❤️</span></h1>
             <p>AI가 썸 상대가 되어드립니다. 썸 상대의 정보를 입력해주세요!</p>
             <div calss="container" style="width:100%; max-width:500px;">
@@ -59,11 +59,11 @@
                         <div class="line"></div>
                     </div>
                 </div>
-                <div class="chat-input-area">
-                    <input v-model="userInput" @keydown.enter.prevent="sendMessage" placeholder="메시지...">
-                    <button class="btn" @click="sendMessage">전송</button>
-                    <button class="btn" @click="evaluateSession">평가하기</button>
-                </div>
+            </div>
+            <div class="chat-input-area">
+                <input v-model="userInput" @keydown.enter.prevent="sendMessage" placeholder="메시지...">
+                <button class="btn" @click="sendMessage">전송</button>
+                <button class="btn" @click="evaluateSession">평가하기</button>
             </div>
         </div>
     </div>
@@ -89,7 +89,7 @@
                 };
 
                 const appendMarker = (score) => {
-                    let color = 'yellow'; // 기본값
+                    let color = 'yellow';
                     if (typeof score === 'number') {
                         if (score >= 90) color = 'green';
                         else if (score < 60) color = 'red';
@@ -133,22 +133,14 @@
                         });
 
                         if (res.status === 200) {
+                            console.log('status : ', res.data.session_id)
                             session_id = res.data.session_id;
                             sessionStarted.value = true;
                             appendMsg('ai', res.data.initial_message);
                         }
 
-                        const sendRes = await axios.post('/api/proxy/send_message', {
-                            session_id: sessionId.value,
-                            message: userInput.value
-                        });
-
-                        if (sendRes.status === 200 && res.data.reply !== null) {
-                            sessionStarted.value = true;
-                            appendMsg('ai', res.data.reply);
-                        }
                     } catch (err) {
-                        alert('시작 실패');
+                        console.log("실패::",err)
                     }
                 };
 
