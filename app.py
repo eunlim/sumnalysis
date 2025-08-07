@@ -38,11 +38,8 @@ def handle_file_upload():
         text_input = request.form.get('text')
         uploaded_file = request.files.get('file')
 
-        if not text_input:
-            return jsonify({'error': '글자 입력후 버튼을 눌러주세요.'}), 400
-
-        if not uploaded_file:
-            return jsonify({'error': '파일 입력후 버튼을 눌러주세요.'}), 400
+        if not text_input and not uploaded_file:
+            return jsonify({'error': '파일 또는 글자를 입력후 버튼을 눌러주세요.'}), 400
 
         if uploaded_file:
             print("file ::", uploaded_file.filename)

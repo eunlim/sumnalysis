@@ -13,6 +13,7 @@
     </div>
     <img id="preview" />
     <button class="submit" @click="submit">분석 제출</button>
+    <button class="ml-3 btn" @click="goToChat">모의대화하기</button>
     <p id="loading" style="display: none;">로딩 중...</p>
 </div>
 
@@ -43,6 +44,9 @@
                 const preview = document.getElementById('preview')
                 previewUrl.value = URL.createObjectURL(f)
                 preview.src = previewUrl.value
+            }
+            const goToChat = async () =>{
+                {#TODO 모의대화하기  (지금있는 사람과) 로 연결 필요#}
             }
             const submit = async () => {
                 if (!text.value.trim() && !file.value) {
@@ -85,7 +89,8 @@
                 onInput,
                 onFileChange,
                 onDrop,
-                submit
+                submit,
+                goToChat
             }
         }
     }).mount('#summ-upload')

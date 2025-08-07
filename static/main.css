@@ -39,8 +39,8 @@ body {
     line-height: 1.7;
     word-break: keep-all;
 }
-#summ-page.chat{
-    width:80%;
+#summ-page .chat{
+    width:80% !important;
     justify-content: flex-start !important;
 }
 
@@ -177,14 +177,16 @@ body {
 }
 
 .btn {
-    background: #a259ff;
+    background: linear-gradient(to right, #a855f7, #9333ea);
     color: white;
     border: none;
     padding: 0.8rem 1.5rem;
     border-radius: 999px;
     font-size: 1rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: 0.3s;
+    box-shadow: 0 4px 10px rgba(147, 51, 234, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .btn:hover {
