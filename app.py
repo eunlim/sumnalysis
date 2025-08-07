@@ -1,11 +1,17 @@
 #app.py
 from flask import Flask, render_template, request, jsonify, make_response
+import websocket
+import threading
 import requests
+import time
+import json
 import os
 
-app = Flask(__name__, static_folder='./static') #app 이라는 플라스크 객체 만들어줌
+app = Flask(__name__, static_folder='./static')
 
 sumUrl = os.getenv('BACKEND_API_URL', 'https://adapting-optionally-mole.ngrok-free.app')
+ws_sessions = {}   # WebSocket 연결 객체 저장
+ws_replies  = {}   # WebSocket 응답 메시지 저장
 
 # 메인
 @app.route('/')
@@ -20,7 +26,6 @@ def sumInput():
 # 파일업로드
 @app.route('/api/v1/analysis', methods=['POST'])
 def handle_file_upload():
-
     try:
         url = f"{sumUrl}/api/v1/analysis"
         headers = {'Content-Type': 'multipart/form-data, application/json, text/plain'}
@@ -40,14 +45,15 @@ def handle_file_upload():
         if uploaded_file:
             print("file ::", uploaded_file.filename)
             ext = os.path.splitext(uploaded_file.filename)[1].lower()
+
             if ext not in ALLOWED_EXTENSIONS:
                 return jsonify({'error': f'허용되지 않은 파일 확장자입니다: {ext}'}), 400
+
             files = {'conversation_file': uploaded_file.stream}
 
         if text_input:
             print("file ::", text_input)
             data['conversation_text'] = text_input
-
 
         res = requests.post(url, files=files, data=data)
 
@@ -151,6 +157,125 @@ def chat():
 def test_chat():
     return render_template('websocket_test.html')
 
+# 프롬프트 수정
+@app.route('/api/proxy/prompt_edit', methods=['POST'])
+def proxy_prompt_edit():
+    try:
+        headers = {'Content-Type': 'application/json'}
+        data = request.get_json()
+        prompt = data.get('prompt')
+        print("prompt:::", jsonify(prompt))
+
+        if not prompt:
+            return jsonify({'error': '프롬프트가 입력이 안 되었습니다.'}), 400
+
+        url = f"{sumUrl}/api/v1/simulations/prompt_edit"
+        response = requests.post(url, headers=headers, json={'prompt': prompt})
+
+        return jsonify(response.json())
+
+    except Exception as e:
+        return jsonify({'error': f'Proxy Error: {str(e)}'}), 500
+
+# 대화시작
+@app.route('/api/proxy/start', methods=['POST'])
+def proxy_start():
+    try:
+        # 외부 API에 시뮬레이션 시작 요청
+        user_data = request.get_json()
+        res = requests.post(url = f"{sumUrl}/api/v1/simulations/start", json=user_data)
+        if res.status_code == 201:
+            data = res.json()
+            session_id = data['session_id']
+
+            # WebSocket 연결 시작
+            open_ws_connection(session_id)
+
+            return jsonify(data)
+        else:
+            print('실패:', res.status_code)
+            return jsonify({'error': '외부 API 호출 실패', 'status': res.status_code}), 500
+
+    except Exception as e:
+        return jsonify({'error': f'Proxy Error: {str(e)}'}), 500
+
+# 메세지 전송
+@app.route('/api/proxy/send_message', methods=['POST'])
+def send_message():
+    data = request.get_json()
+    session_id = data['session_id']
+    message = data['message']
+
+    ws = ws_sessions.get(session_id)
+    if not ws:
+        return jsonify({'error': 'WebSocket 세션 없음'}), 404
+
+    try:
+        ws.send(json.dumps({'message': message}))
+        # 메시지 응답 대기
+        for _ in range(50):  # 50 × 0.1초 = 최대 5초
+            if session_id in ws_replies:
+                reply = ws_replies.pop(session_id)
+                return jsonify({'status': '200', 'reply': reply})
+            time.sleep(0.1)
+        return jsonify({'error': 'AI 응답 대기 시간 초과'}), 504
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# 평가하기
+@app.route('/api/v1/evaluateSession', methods=['POST'])
+def evaluateSession():
+    try :
+        headers = {'Content-Type': 'application/json'}
+        data = request.get_json()
+        session_id = data.get('session_id')
+        url = f"{sumUrl}/api/v1/simulations/evaluate"
+        res = requests.post(url, headers=headers, json={'session_id': session_id})
+        if res.status_code == 201 :
+            print("res::::",res.json())
+            return jsonify(res.json())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# session 종료
+@app.route('/api/proxy/end_session', methods=['POST'])
+def end_session():
+    data = request.get_json()
+    session_id = data.get('session_id')
+    ws = ws_sessions.get(session_id)
+
+    if not ws:
+        return jsonify({'error': 'WebSocket 세션 없음'}), 404
+
+    try:
+        ws.close()
+        del ws_sessions[session_id]
+        return jsonify({'status': 'closed'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# session 저장용
+def open_ws_connection(session_id):
+    ws_url = f"wss:{sumUrl}/api/v1/simulations/ws/{session_id}"
+    def on_message(ws, message):
+        print(f"[ WS MESSAGE from {session_id}]:", message)
+
+    def on_close(ws, close_status_code, close_msg):
+        print(f"[ WS CLOSED {session_id}]")
+
+    def on_message(ws, message):
+        print(f"[ WS MESSAGE from {session_id}]:", message)
+        ws_replies[session_id] = json.loads(message).get('message', '')
+
+    ws = websocket.WebSocketApp(ws_url,
+                                on_message=on_message,
+                                on_close=on_close)
+
+    thread = threading.Thread(target=ws.run_forever)
+    thread.daemon = True
+    thread.start()
+
+    ws_sessions[session_id] = ws
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

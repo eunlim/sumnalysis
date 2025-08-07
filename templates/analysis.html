@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ko">
 {% include 'head.html' %}
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-<div id="app" v-cloak class="max-w-5xl mx-auto p-6 space-y-6">
+<body>
+<div id="app" v-cloak class="container mx-auto p-6 space-y-6">
 
   <!-- 탭 메뉴 -->
-  <nav class="flex justify-center space-x-8 border-b border-gray-200 dark:border-gray-700 pb-4">
+  <nav class="flex justify-center space-x-8 border-b border-gray-200 pb-4">
     <button
       v-for="tab in tabs"
       :key="tab.name"
@@ -23,7 +23,7 @@
 
   <!-- 썸 점수 -->
   <sum-score v-if="currentTab === 'score'">
-    <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-8 text-center">
+    <div class="bg-white shadow-lg rounded-xl p-8 text-center">
       <h2 class="text-5xl font-extrabold mb-4">
         🔥 <span :style="{ color: param.flame_color }" class="inline-block">[[ param.score ]]%</span>
       </h2>
@@ -37,11 +37,9 @@
 
 <style>
   [v-cloak] { display: none; }
-  /* 예시: 차트 카드를 위한 클래스 */
   .chart-card {
-    @apply bg-white dark:bg-gray-800 shadow-md rounded-lg p-6;
+    @apply bg-white shadow-md rounded-lg p-6;
   }
-  /* 요약 리스트 스타일링 */
   .summary-list li {
     @apply flex items-start space-x-2;
   }
@@ -50,7 +48,6 @@
     @apply w-2 h-2 mt-2 rounded-full bg-purple-500;
   }
 </style>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const { createApp, ref, watch, reactive } = Vue;
@@ -111,7 +108,12 @@ createApp({
               });
             });
           }
-        },
+        }, methods: {
+              goToChat() {
+                  {#TODO 모의대화하기  (지금있는 사람과) 로 연결 필요#}
+                {#  window.location.href = "/chat";#}
+              }
+          },
         template: html
       };
     };

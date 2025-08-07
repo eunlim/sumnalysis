@@ -15,6 +15,7 @@ body {
     min-height: 100vh;
     text-align: center;
     padding: 2rem;
+    box-sizing: border-box;
     color: #5e239d;
 }
 
@@ -37,6 +38,10 @@ body {
     margin-bottom: 2.5rem;
     line-height: 1.7;
     word-break: keep-all;
+}
+#summ-page .chat{
+    width:80% !important;
+    justify-content: flex-start !important;
 }
 
 .button-group {
@@ -172,21 +177,172 @@ body {
 }
 
 .btn {
-    background: #a259ff;
+    background: linear-gradient(to right, #a855f7, #9333ea);
     color: white;
     border: none;
     padding: 0.8rem 1.5rem;
     border-radius: 999px;
     font-size: 1rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: 0.3s;
+    box-shadow: 0 4px 10px rgba(147, 51, 234, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .btn:hover {
     background: #7b2cbf;
 }
 
-/* ✅ 반응형: 모바일 대응 */
+.msg {
+    display: flex;
+    margin-bottom: 0.5rem;
+    padding: 0 1rem;
+}
+.msg {
+    display: flex;
+    margin-bottom: 0.5rem;
+    padding: 0 1rem;
+}
+.msg.user {
+    justify-content: flex-end;
+}
+.msg.ai {
+    justify-content: flex-start;
+}
+.bubble {
+    max-width: 70%;
+    padding: 0.8rem 1.2rem;
+    border-radius: 1.25rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.msg.user .bubble {
+    background: #e9d5ff;
+    color: #5e239d;
+    border-bottom-right-radius: 0;
+}
+.msg.ai .bubble {
+    background: #f3f3f3;
+    color: #444;
+    border-bottom-left-radius: 0;
+    text-align: left;
+}
+
+.chat-input-area {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 0;
+    width: 100%;
+    border-top: 1px solid #eee;
+    margin-top: 1rem;
+}
+
+.chat-input-area input {
+    flex: 1;
+    padding: 0.8rem 1rem;
+    border-radius: 9999px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    outline: none;
+}
+
+.marker-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    width: 100%;
+}
+
+.line {
+    flex: 1;
+    height: 1px;
+    background-color: #ccc;
+    max-width: 100px;
+}
+
+.marker-label {
+    padding: 0.4rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.marker-label.green {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+.marker-label.yellow {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+.marker-label.red {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.marker-line.with-lines {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    animation: fadeIn 0.4s ease-out;
+}
+.marker-line .line {
+    flex-grow: 1;
+    height: 1px;
+    background-color: #ccc;
+}
+.marker-label {
+    padding: 0.3rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+/* 마커 색상별 */
+.marker-label.green {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+.marker-label.yellow {
+    background-color: #fef9c3;
+    color: #92400e;
+}
+.marker-label.red {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+#messages {
+    flex-grow: 1;
+    width: 100%;
+    max-height: none;
+    min-height: 55vh;
+    background: white;
+    padding: 1rem;
+    border-radius: 1rem;
+    overflow-y: auto;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* fade-in 애니메이션 */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 반응형: 모바일 대응 */
 @media (max-width: 480px) {
     #summ-page h1 {
         font-size: 2rem;
@@ -220,5 +376,40 @@ body {
     .container {
         margin: 2rem 1rem;
         padding: 1.5rem;
+    }
+    .marker-line {
+        gap: 0.5rem;
+    }
+
+    .marker-label {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.7rem;
+        margin: 0 0.3rem;
+    }
+
+    .marker-line .line {
+        background-color: #ddd;
+    }
+    .msg .bubble {
+        max-width: 90%;
+        font-size: 0.9rem;
+    }
+
+    .chat-input-area {
+        flex-direction: column;
+    }
+
+    .chat-input-area input,
+    .chat-input-area button {
+        width: 100%;
+    }
+
+    .bubble {
+        max-width: 90%;
+        font-size: 0.85rem;
+    }
+
+    #messages {
+        min-height: 45vh;
     }
 }
