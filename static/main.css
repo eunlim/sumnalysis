@@ -185,12 +185,30 @@ body {
     background: #7b2cbf;
 }
 
-.btn.pill { border-radius: 9999px; padding: 0.5rem 1rem; }
-
-.btn.selected {
+.promBtn{
     background: #E9D5FF;
     color: #6B21A8;
     border-color: #C4B5FD;
+    padding: 0.8rem 1.5rem;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(147, 51, 234, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.promBtn.selected {
+    background: linear-gradient(to right, #a855f7, #9333ea);
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(147, 51, 234, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .msg {

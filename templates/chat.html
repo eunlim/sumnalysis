@@ -10,7 +10,7 @@
                 <div class="mb-3">
                     <label class="block mb-2">프롬프트 선택</label>
                     <div class="flex gap-2 flex-wrap justify-center">
-                        <button v-for="p in prompts" :key="p.style_name" class="btn pill"
+                        <button v-for="p in prompts" :key="p.style_name" class="promBtn"
                                 :class="{ selected: selectPrompt === p.style_name }" type="button"
                                 @click="selectPrompt = p.style_name">
                             [[ p.label ]]
