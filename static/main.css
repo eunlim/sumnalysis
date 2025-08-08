@@ -107,14 +107,6 @@ body {
     max-height: 200px;
 }
 
-.container {
-    margin: 5rem auto;
-    background: #f9f5ff;
-    border-radius: 1.5rem;
-    box-shadow: 0 4px 20px rgba(162, 89, 255, 0.2);
-    text-align: center;
-}
-
 .tab-container {
     max-width: 900px;
     margin:auto;
@@ -206,11 +198,6 @@ body {
     margin-bottom: 0.5rem;
     padding: 0 1rem;
 }
-.msg {
-    display: flex;
-    margin-bottom: 0.5rem;
-    padding: 0 1rem;
-}
 .msg.user {
     justify-content: flex-end;
 }
@@ -259,6 +246,7 @@ body {
     outline: none;
 }
 
+/* 마커 */
 .marker-line {
     display: flex;
     align-items: center;
@@ -380,11 +368,14 @@ body {
     .notes p {
         font-size: 0.95rem;
     }
-
     .container {
-        margin: 2rem 1rem;
-        padding: 1.5rem;
+        margin: 2rem auto 1rem;;
+        background: #f9f5ff;
+        border-radius: 1.5rem;
+        box-shadow: 0 4px 20px rgba(162, 89, 255, 0.2);
+        text-align: center;
     }
+
     .marker-line {
         gap: 0.5rem;
     }
