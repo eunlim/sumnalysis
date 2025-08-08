@@ -193,6 +193,14 @@ body {
     background: #7b2cbf;
 }
 
+.btn.pill { border-radius: 9999px; padding: 0.5rem 1rem; }
+
+.btn.selected {
+    background: #E9D5FF;
+    color: #6B21A8;
+    border-color: #C4B5FD;
+}
+
 .msg {
     display: flex;
     margin-bottom: 0.5rem;
@@ -327,7 +335,7 @@ body {
 #messages {
     flex-grow: 1;
     width: 100%;
-    max-height: none;
+    max-height: 500px;
     min-height: 55vh;
     background: white;
     padding: 1rem;

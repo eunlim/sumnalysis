@@ -7,13 +7,18 @@
             <h1>썸 연습하기<span class="heart">❤️</span></h1>
             <p>AI가 썸 상대가 되어드립니다. 썸 상대의 정보를 입력해주세요!</p>
             <div calss="container" style="width:100%; max-width:500px;">
-                <div class="flex items-center gap-2 mb-3">
-                    <label>커스텀 프롬프트</label>
-                    <textarea v-model="promptEdit" rows="2" class="flex-1 border rounded px-2 py-1" placeholder="새로운 프롬프트를 입력하세요"></textarea>
+                <div class="mb-3">
+                    <label class="block mb-2">프롬프트 선택</label>
+                    <div class="flex gap-2 flex-wrap justify-center">
+                        <button v-for="p in prompts" :key="p.style_name" class="btn pill"
+                                :class="{ selected: selectPrompt === p.style_name }" type="button"
+                                @click="selectPrompt = p.style_name">
+                            [[ p.label ]]
+                        </button>
+                    </div>
                 </div>
-                <button @click="editPrompt" class="btn mt-2 mb-3">프롬프트 수정</button>
                 <div class="flex items-center gap-2 mb-3">
-                    <label class="w-24 text-sm font-medium text-right">성별</label>
+                    <label class="w-24 text-sm font-medium">성별</label>
                     <select v-model="form.gender" class="flex-1 border rounded px-2 py-1">
                         <option disabled value="">선택</option>
                         <option value="male">남</option>
@@ -22,23 +27,23 @@
                     </select>
                 </div>
                 <div class="flex items-center gap-2 mb-3">
-                    <label class="w-24 text-sm font-medium text-right">나이</label>
+                    <label class="w-24 text-sm font-medium">나이</label>
                     <input type="number" v-model="form.age" class="flex-1 border rounded px-2 py-1" placeholder="연령">
                 </div>
                 <div class="flex items-center gap-2 mb-3">
-                    <label class="w-24 text-sm font-medium text-right">MBTI</label>
+                    <label class="w-24 text-sm font-medium">MBTI</label>
                     <input type="text" v-model="form.mbti" class="flex-1 border rounded px-2 py-1" placeholder="예: ENFP" maxlength="4">
                 </div>
                 <div class="flex items-center gap-2 mb-3">
-                    <label class="w-24 text-sm font-medium text-right">대화내용</label>
+                    <label class="w-24 text-sm font-medium">대화내용</label>
                     <textarea v-model="form.conversation" class="flex-1 border rounded px-2 py-1" rows="2" placeholder="최근 대화 요약"></textarea>
                 </div>
                 <div class="flex items-center gap-2 mb-3">
-                    <label class="w-24 text-sm font-medium text-right">상황</label>
+                    <label class="w-24 text-sm font-medium">상황</label>
                     <textarea v-model="form.situation" class="flex-1 border rounded px-2 py-1" rows="2" placeholder="예) 퇴근 후 운동가는 길"></textarea>
                 </div>
                 <div class="flex items-center gap-2 mb-3">
-                    <label class="w-24 text-sm font-medium text-right">테토-에겐 성향</label>
+                    <label class="w-24 text-sm font-medium">테토-에겐 성향</label>
                     <textarea v-model="form.trait" class="flex-1 border rounded px-2 py-1" rows="2" placeholder="예) 테토 / 에겐"></textarea>
                 </div>
                 <button class="btn mt-4" @click="startConversation">❤️ START ❤️</button>
@@ -46,7 +51,7 @@
         </div>
         <div id="summ-page" v-else>
             <h1>[[ currentPersona ]]와 대화하기 <span class="heart">💬</span></h1>
-            <div id="messages" style="max-height: 300px; overflow-y: auto; background: #fff; padding: 1rem; border-radius: 1rem;">
+            <div id="messages">
                 <div v-for="(msg, i) in messages" :key="i" :class="['msg', msg.role]">
                     <div v-if="msg.role === 'user' || msg.role === 'ai'" class="bubble">
                         [[ msg.text || '' ]]
@@ -73,7 +78,12 @@
         createApp({
             delimiters: ['[[', ']]'],
             setup() {
-                const promptEdit = ref('');
+                const prompts = [
+                    { style_name: '희경', label: '히찡' },
+                    { style_name: '택한', label: '택한' },
+                    { style_name: '은림', label: '은림' },
+                ];
+                const selectPrompt = ref(prompts[0].style_name); // 기본 선택
                 const sessionStarted = ref(false);
                 const currentPersona = ref('썸상대');
                 const session_Id = ref(null);
@@ -89,6 +99,7 @@
                 };
 
                 const appendMarker = (score) => {
+
                     let color = 'yellow';
                     if (typeof score === 'number') {
                         if (score >= 90) color = 'green';
@@ -105,14 +116,19 @@
                     }, 50);
                 };
 
-                const editPrompt = async () => {
-                    if (!promptEdit.value.trim()) return alert('프롬프트 입력하세요');
+                const onSelect = async (name) => {
+
+                    if (name === null || name === "") alert("프롬프트를 선택 해 주세요.");
+                    if (name === "희경") return true;
+                    selectPrompt.value = name;
                     try {
-                        await axios.post('/api/proxy/prompt_edit', { prompt: promptEdit.value });
-                        alert('프롬프트 수정 완료');
-                        promptEdit.value = '';
+                        const res = await axios.post('/api/proxy/prompt', { style_name: name });
+                        if (res.status === 200) {
+                            return true;
+                        }
                     } catch (err) {
-                        alert('수정 실패');
+                        console.log("실패::",err)
+                        return false;
                     }
                 };
 
@@ -121,6 +137,10 @@
                     if (!form.gender || !form.age || !form.mbti || !form.conversation || !form.situation || !form.trait) {
                         alert('모든 항목을 입력하세요'); return;
                     }
+
+                    const ok = await onSelect(selectPrompt.value);
+                    if (!ok) return;
+
                     currentPersona.value = form.gender === 'male' ? '썸남' : form.gender === 'female' ? '썸녀' : '썸상대';
                     try {
                         const res = await axios.post('/api/proxy/start', {
@@ -174,8 +194,8 @@
                 };
 
                 return {
-                    form, promptEdit, sessionStarted, currentPersona,userInput, messages,
-                    editPrompt, startConversation, sendMessage, evaluateSession
+                    form, prompts, onSelect, sessionStarted, currentPersona,userInput, messages,
+                    selectPrompt, startConversation, sendMessage, evaluateSession
                 };
             }
         }).mount('#app');

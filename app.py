@@ -157,22 +157,26 @@ def chat():
 def test_chat():
     return render_template('websocket_test.html')
 
-# 프롬프트 수정
-@app.route('/api/proxy/prompt_edit', methods=['POST'])
-def proxy_prompt_edit():
+# 프롬프트 선택
+@app.route('/api/proxy/prompt', methods=['POST'])
+def selectPrompt():
     try:
         headers = {'Content-Type': 'application/json'}
         data = request.get_json()
-        prompt = data.get('prompt')
+        prompt = data.get('style_name')
         print("prompt:::", jsonify(prompt))
 
         if not prompt:
-            return jsonify({'error': '프롬프트가 입력이 안 되었습니다.'}), 400
+            return jsonify({'error': '프롬프트가 선택이 안 되었습니다.'}), 400
 
-        url = f"{sumUrl}/api/v1/simulations/prompt_edit"
-        response = requests.post(url, headers=headers, json={'prompt': prompt})
+        url = f"{sumUrl}/api/v1/simulations/prompts/select"
+        response = requests.post(url, headers=headers, json={'style_name': prompt})
 
-        return jsonify(response.json())
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else :
+            print('실패:', response.status_code)
+            return jsonify({'error': '외부 API 호출 실패', 'status': response.status_code}), 500
 
     except Exception as e:
         return jsonify({'error': f'Proxy Error: {str(e)}'}), 500
